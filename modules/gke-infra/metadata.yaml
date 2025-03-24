@@ -1,0 +1,203 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: BlueprintMetadata
+metadata:
+  name: terraform-google-gke-accelerator-cluster-gke-infra
+  annotations:
+    config.kubernetes.io/local-config: "true"
+spec:
+  info:
+    title: AI on GKE Benchmark Framework Infrastructure
+    source:
+      repo: https://github.com/singhalbhaskar/terraform-google-gke-accelerator-cluster.git
+      sourceType: git
+      dir: /modules/gke-infra
+    description: {}
+    icon: assets/icon.png
+  content:
+    subBlueprints:
+      - name: artifact-registry
+        location: modules/artifact-registry
+      - name: gke-cluster-autopilot
+        location: modules/gke-cluster-autopilot
+      - name: gke-cluster-standard
+        location: modules/gke-cluster-standard
+      - name: gke-hub
+        location: modules/gke-hub
+      - name: gke-nodepool
+        location: modules/gke-nodepool
+      - name: iam-service-account
+        location: modules/iam-service-account
+      - name: net-cloudnat
+        location: modules/net-cloudnat
+      - name: net-vpc
+        location: modules/net-vpc
+      - name: project
+        location: modules/project
+    examples:
+      - name: simple_example
+        location: examples/simple_example
+  interfaces:
+    variables:
+      - name: gke_autopilot
+        description: Create GKE Autopiot cluster
+        varType: bool
+        defaultValue: false
+      - name: cluster_create
+        description: Cluster configuration for newly created cluster. Set to null to use existing cluster, or create using defaults in new project.
+        varType: |-
+          object({
+              labels = optional(map(string))
+              master_authorized_ranges = optional(map(string), {
+                rfc-1918-10-8 = "10.0.0.0/8"
+              })
+              master_ipv4_cidr_block = optional(string, "172.16.255.0/28")
+              vpc = optional(object({
+                id        = string
+                subnet_id = string
+                secondary_range_names = optional(object({
+                  pods     = optional(string, "pods")
+                  services = optional(string, "services")
+                }), {})
+              }))
+              version = optional(string)
+              options = optional(object({
+                release_channel                       = optional(string, "REGULAR")
+                enable_backup_agent                   = optional(bool, false)
+                dns_cache                             = optional(bool, true)
+                enable_gcs_fuse_csi_driver            = optional(bool, false)
+                enable_gcp_filestore_csi_driver       = optional(bool, false)
+                enable_gce_persistent_disk_csi_driver = optional(bool, false)
+              }), {})
+            })
+      - name: project_create
+        description: Project configuration for newly created project. Leave null to use existing project. Project creation forces VPC and cluster creation.
+        varType: |-
+          object({
+              billing_account = string
+              parent          = optional(string)
+              shared_vpc_host = optional(string)
+            })
+      - name: registry_create
+        description: Create remote Docker Artifact Registry.
+        varType: bool
+        defaultValue: true
+      - name: vpc_create
+        description: Project configuration for newly created VPC. Leave null to use existing VPC, or defaults when project creation is required.
+        varType: |-
+          object({
+              name                     = optional(string)
+              subnet_name              = optional(string)
+              primary_range_nodes      = optional(string, "10.0.0.0/24")
+              secondary_range_pods     = optional(string, "10.16.0.0/20")
+              secondary_range_services = optional(string, "10.32.0.0/24")
+              enable_cloud_nat         = optional(bool, false)
+              proxy_only_subnet        = optional(string)
+            })
+      - name: enable_private_endpoint
+        description: When true, the cluster's private endpoint is used as the cluster endpoint and access through the public endpoint is disabled. Ignored if private_cluster_config set to null. May need to destroy & recreate to apply public cluster.
+        varType: bool
+        defaultValue: true
+      - name: private_cluster_config
+        description: Private cluster configuration. Default of {} configures a private_cluster with the values in below object. Set to null to make cluster public, which can be used for simple kubectl access when debugging or learning but should not be used in production.
+        varType: |-
+          object({
+              master_global_access = optional(bool, true)
+            })
+        defaultValue: {}
+      - name: cluster_name
+        description: Name of new or existing cluster.
+        varType: string
+        required: true
+      - name: fleet_project_id
+        description: GKE Fleet project id. If null cluster project will also be used for fleet.
+        varType: string
+      - name: prefix
+        description: Prefix used for resource names.
+        varType: string
+        defaultValue: ai-gke-0
+      - name: project_id
+        description: Project id of existing or created project.
+        varType: string
+        required: true
+      - name: region
+        description: Region used for network resources.
+        varType: string
+        defaultValue: us-central1
+      - name: gke_location
+        description: Region or zone used for cluster.
+        varType: string
+        defaultValue: us-central1-a
+      - name: node_locations
+        description: Zones in which the GKE Autopilot cluster's nodes are located.
+        varType: list(string)
+        defaultValue: []
+      - name: nodepools
+        description: Nodepools for the GKE Standard cluster
+        varType: |-
+          map(object({
+              machine_type   = optional(string, "n2-standard-2"),
+              gke_version    = optional(string),
+              max_node_count = optional(number, 10),
+              min_node_count = optional(number, 1),
+              spot           = optional(bool, false)
+
+              guest_accelerator = optional(object({
+                type  = optional(string),
+                count = optional(number),
+                gpu_driver = optional(object({
+                  version                    = string
+                  partition_size             = optional(string)
+                  max_shared_clients_per_gpu = optional(number)
+                }))
+              }))
+
+              ephemeral_ssd_block_config = optional(object({
+                ephemeral_ssd_count = optional(number)
+              }))
+
+              local_nvme_ssd_block_config = optional(object({
+                local_ssd_count = optional(number)
+              }))
+            }))
+        defaultValue: {}
+      - name: filestore_storage
+        description: Filestore storage instances. If GKE deployment is regional, tier should be set to ENTERPRISE
+        varType: |-
+          map(object({
+              name        = string
+              tier        = string
+              capacity_gb = number
+            }))
+        defaultValue: {}
+    outputs:
+      - name: created_resources
+        description: IDs of the resources created, if any.
+      - name: fleet_host
+        description: Fleet Connect Gateway host that can be used to configure the GKE provider.
+      - name: get_credentials
+        description: Run one of these commands to get cluster credentials. Credentials via fleet allow reaching private clusters without no direct connectivity.
+      - name: project_id
+        description: Project ID of where the GKE cluster is hosted
+  requirements:
+    roles:
+      - level: Project
+        roles:
+          - roles/owner
+    services:
+      - cloudresourcemanager.googleapis.com
+      - storage-api.googleapis.com
+      - serviceusage.googleapis.com
