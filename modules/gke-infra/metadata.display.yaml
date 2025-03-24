@@ -1,0 +1,78 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: BlueprintMetadata
+metadata:
+  name: terraform-google-gke-accelerator-cluster-gke-infra-display
+  annotations:
+    config.kubernetes.io/local-config: "true"
+spec:
+  info:
+    title: AI on GKE Benchmark Framework Infrastructure
+    source:
+      repo: https://github.com/singhalbhaskar/terraform-google-gke-accelerator-cluster.git
+      sourceType: git
+      dir: /modules/gke-infra
+  ui:
+    input:
+      variables:
+        cluster_create:
+          name: cluster_create
+          title: Cluster Create
+        cluster_name:
+          name: cluster_name
+          title: Cluster Name
+        enable_private_endpoint:
+          name: enable_private_endpoint
+          title: Enable Private Endpoint
+        filestore_storage:
+          name: filestore_storage
+          title: Filestore Storage
+        fleet_project_id:
+          name: fleet_project_id
+          title: Fleet Project Id
+        gke_autopilot:
+          name: gke_autopilot
+          title: Gke Autopilot
+        gke_location:
+          name: gke_location
+          title: Gke Location
+        node_locations:
+          name: node_locations
+          title: Node Locations
+        nodepools:
+          name: nodepools
+          title: Nodepools
+        prefix:
+          name: prefix
+          title: Prefix
+        private_cluster_config:
+          name: private_cluster_config
+          title: Private Cluster Config
+        project_create:
+          name: project_create
+          title: Project Create
+        project_id:
+          name: project_id
+          title: Project Id
+        region:
+          name: region
+          title: Region
+        registry_create:
+          name: registry_create
+          title: Registry Create
+        vpc_create:
+          name: vpc_create
+          title: Vpc Create
